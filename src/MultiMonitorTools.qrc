@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/AppIcon.ico</file>
+        <file>resources/Disabled.ico</file>
+    </qresource>
+</RCC>
