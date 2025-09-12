@@ -5,24 +5,28 @@ if(NOT WIN32)
     message(FATAL_ERROR "This project only builds on Windows.")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 if(NOT (MSVC AND CMAKE_VS_PLATFORM_TOOLSET STREQUAL "v143"))
     message(FATAL_ERROR "This project requires MSVC 2022 (v143).")
 endif()
+
+if(CMAKE_SYSTEM_VERSION VERSION_LESS "10.0.22621.0")
+    message(FATAL_ERROR "Windows SDK too old: ${CMAKE_SYSTEM_VERSION}. Need at least 10.0.22621.0")
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(downloadQt)
 
 set(QT_VERSION "6.9.1")
 
-find_package(Qt6 6.8.0 QUIET COMPONENTS Core Gui Widgets Concurrent)
+if(Qt6_DIR)
+    message(STATUS "Qt6_DIR is set to: ${Qt6_DIR}")
+else()
+    message(STATUS "Qt6_DIR is NOT set → downloading with aqt...")
 
-if(NOT Qt6_FOUND)
-    message(STATUS "Qt not found in existing CMAKE_PREFIX_PATH → downloading with aqt...")
-
-    # Download Qt
+     # Download Qt
     download_qt(
     ${QT_VERSION}
     ""
@@ -34,12 +38,10 @@ if(NOT Qt6_FOUND)
     # Append the downloaded Qt to CMAKE_PREFIX_PATH
     list(APPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}/Qt/${QT_VERSION}/msvc2022_64")
     set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}" CACHE PATH "Prefix path for CMake packages" FORCE)
-else()
-    message(STATUS "Found Qt in existing CMAKE_PREFIX_PATH → using system install")
 endif()
 
 # Find Qt
-find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui Concurrent)
+find_package(Qt6 6.8.0 REQUIRED COMPONENTS Widgets Core Gui Concurrent)
 
 # Enable automatic handling of Qt stuff
 set(CMAKE_AUTOMOC ON)
