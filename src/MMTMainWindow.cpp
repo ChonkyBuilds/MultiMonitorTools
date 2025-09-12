@@ -119,15 +119,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     QObject::connect(_logLevel, &QComboBox::currentTextChanged, this, &MainWindow::onLogLevelChanged);
 
-    auto aboutQtButton = new QPushButton("About Qt");
-    QObject::connect(aboutQtButton, &QPushButton::clicked, this, &MainWindow::onAbout);
+    auto aboutBuutton = new QPushButton("About");
+    QObject::connect(aboutBuutton, &QPushButton::clicked, this, &MainWindow::onAbout);
 
     auto logLevelWidget = new QWidget;
     auto logLevelWidgetLayout = new QHBoxLayout(logLevelWidget);
     logLevelWidgetLayout->setContentsMargins(0, 0, 0, 0);
     logLevelWidgetLayout->addWidget(new QLabel("Log level:"));
     logLevelWidgetLayout->addWidget(_logLevel);
-    statusBar()->addPermanentWidget(aboutQtButton);
+    statusBar()->addPermanentWidget(aboutBuutton);
     statusBar()->addPermanentWidget(logLevelWidget);
     statusBar()->addPermanentWidget(toggleOutputConsole);
 
@@ -451,7 +451,27 @@ void MainWindow::onMonitorInfoRefreshed()
 
 void MainWindow::onAbout()
 {
-    qApp->aboutQt();
+    QDialog dlg;
+    dlg.setWindowTitle("About");
+
+    auto layout = new QVBoxLayout(&dlg);
+    auto label = new QLabel(this);
+    label->setTextFormat(Qt::RichText);
+    label->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    label->setOpenExternalLinks(true);
+    label->setText(QString("MultiMonitorTools V%1.<br>Licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.en.html'>GPLv3 license</a>.<br>Visit this <a href='https://github.com/ChonkyBuilds/MultiMonitorTools'>github page</a> to check for updates or report bugs.").arg(VERSION));
+    label->setWordWrap(false);
+    layout->addWidget(label);
+
+    auto aboutQtLayout = new QHBoxLayout;
+    auto aboutQtButton = new QPushButton("About Qt");
+    aboutQtLayout->addWidget(new QLabel("This app is built with Qt6:"));
+    aboutQtLayout->addWidget(aboutQtButton);
+    aboutQtLayout->addStretch();
+    QObject::connect(aboutQtButton, &QPushButton::clicked, &dlg, [=]() {qApp->aboutQt(); });
+    layout->addLayout(aboutQtLayout);
+    layout->addStretch();
+    dlg.exec();
 }
 
 void MainWindow::restartCursorAdjust()
