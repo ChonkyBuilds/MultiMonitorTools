@@ -193,9 +193,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     QObject::connect(_pinWindowsTimer, &QTimer::timeout, this, &MainWindow::onPinWindows);
     _pinWindowsTimer->start();
 
-    _cursorAdjustRestartCooldown = new QTimer(this);
-    _cursorAdjustRestartCooldown->setSingleShot(true);
-    _cursorAdjustRestartCooldown->setInterval(1000);
+    _cursorAdjustRestartTimer = new QTimer(this);
+    _cursorAdjustRestartTimer->setSingleShot(true);
+    _cursorAdjustRestartTimer->setInterval(1000);
+    QObject::connect(_cursorAdjustRestartTimer, &QTimer::timeout, this, &MainWindow::restartCursorAdjust);
 
     QMetaObject::invokeMethod(this, "onEventLoopStarted");
 }
@@ -362,12 +363,7 @@ void MainWindow::onScreenGeometryChanged()
 {
     if (Settings::instance()->cursorAdjustEnabled())
     {
-        if (!_cursorAdjustRestartCooldown->isActive())
-        {
-            _cursorAdjustRestartCooldown->start();
-            CursorAdjust::instance()->exit();
-            CursorAdjust::instance()->initiate();
-        }
+        _cursorAdjustRestartTimer->start(1000);
     }
 }
 
@@ -456,6 +452,15 @@ void MainWindow::onMonitorInfoRefreshed()
 void MainWindow::onAbout()
 {
     qApp->aboutQt();
+}
+
+void MainWindow::restartCursorAdjust()
+{
+    if (Settings::instance()->cursorAdjustEnabled())
+    {
+        CursorAdjust::instance()->exit();
+        CursorAdjust::instance()->initiate();
+    }
 }
 
 }

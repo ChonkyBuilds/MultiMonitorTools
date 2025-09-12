@@ -46,6 +46,7 @@ private slots:
     void setupOverlays();
     void onMonitorInfoRefreshed();
     void onAbout();
+    void restartCursorAdjust();
 
 protected:
     void closeEvent(QCloseEvent* evt) override;
@@ -59,7 +60,7 @@ private:
     QCheckBox* _drawGridLines = nullptr;
     QDoubleSpinBox* _gridLineGap = nullptr;
     MonitorConfigWidget* _monitorConfigWidget = nullptr;
-    QTimer* _cursorAdjustRestartCooldown = nullptr;
+    QTimer* _cursorAdjustRestartTimer = nullptr;
 };
 
 }
