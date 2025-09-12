@@ -139,7 +139,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     monitorGroupBoxLayout->setContentsMargins(0, 0, 0, 0);
     monitorGroupBoxLayout->addWidget(_monitorConfigWidget);
     
-    auto cursorAdjustSettings = new QGroupBox("Cursor settings");
+    auto cursorAdjustSettings = new QGroupBox("Cursor Settings");
     auto cursorAdjustSettingsLayout = new QVBoxLayout(cursorAdjustSettings);
     cursorAdjustSettingsLayout->addWidget(toggleCursorAdjust);
     auto drawGridLinesLayout = new QHBoxLayout();
@@ -151,7 +151,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     drawGridLinesLayout->addStretch();
     cursorAdjustSettingsLayout->addLayout(drawGridLinesLayout);
 
-    auto virtualDesktopSettings = new QGroupBox("Virtual desktop settings");
+    auto virtualDesktopSettings = new QGroupBox("Virtual Desktop Settings");
     auto virtualDesktopSettingsLayout = new QVBoxLayout(virtualDesktopSettings);
     virtualDesktopSettingsLayout->addWidget(enableAnimation);
     auto easingCurveLayout = new QHBoxLayout;
@@ -160,7 +160,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     easingCurveLayout->addStretch();
     virtualDesktopSettingsLayout->addLayout(easingCurveLayout);
     auto animationDurationLayout = new QHBoxLayout;
-    animationDurationLayout->addWidget(new QLabel("Animation duration:"));
+    animationDurationLayout->addWidget(new QLabel("Animation duration(ms):"));
     animationDurationLayout->addWidget(animationDuration);
     animationDurationLayout->addStretch();
     virtualDesktopSettingsLayout->addLayout(animationDurationLayout);

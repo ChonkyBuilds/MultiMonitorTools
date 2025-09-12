@@ -49,11 +49,11 @@ MonitorConfigWidget::MonitorConfigWidget(QWidget* parent) : QFrame(parent)
     auto displayParametersBox = new QGroupBox;
     auto displayParametersBoxLayout = new QHBoxLayout(displayParametersBox);
     displayParametersBox->setTitle(MonitorConfigWidget::tr("Display physical coordinates"));
-    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("X")));
+    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("X(mm)")));
     displayParametersBoxLayout->addWidget(_x);
-    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("Y")));
+    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("Y(mm)")));
     displayParametersBoxLayout->addWidget(_y);
-    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("Size")));
+    displayParametersBoxLayout->addWidget(new QLabel(MonitorConfigWidget::tr("Width(mm)")));
     displayParametersBoxLayout->addWidget(_size);
     displayParametersBoxLayout->addStretch();
     mainLayout->addWidget(displayParametersBox);
