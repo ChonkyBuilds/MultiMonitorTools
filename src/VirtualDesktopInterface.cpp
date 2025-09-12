@@ -195,6 +195,17 @@ int getUpdateBuildVersionFromRegistry()
 
 bool getVirtualDesktopService(VirtualDesktopPinnedApps*& virtualDesktopPinnedApps, ApplicationViewCollection*& applicationViewCollection, VirtualDesktopManagerInternal*& virtualDesktopManagerInternal, VirtualDesktopInterface*& virtualDesktopInterface)
 {
-    qDebug() << "windows version = " << getBuildNumberFromRegistry() << "." << getUpdateBuildVersionFromRegistry();
-    return getVirtualDesktopService_Win11_23H2(virtualDesktopPinnedApps, applicationViewCollection, virtualDesktopManagerInternal, virtualDesktopInterface);
+    int buildNumber = getBuildNumberFromRegistry();
+    int buildVersion = getUpdateBuildVersionFromRegistry();
+    qDebug() << QString("windows version = %1.%2").arg(buildNumber).arg(buildVersion);
+
+    if (buildNumber > 22631 || ( buildNumber == 22631 && buildVersion >= 3085))
+    {
+        return getVirtualDesktopService_Win11_23H2(virtualDesktopPinnedApps, applicationViewCollection, virtualDesktopManagerInternal, virtualDesktopInterface);
+    }
+    else
+    {
+        return getVirtualDesktopService_Win11_23(virtualDesktopPinnedApps, applicationViewCollection, virtualDesktopManagerInternal, virtualDesktopInterface);
+    }
+
 }
