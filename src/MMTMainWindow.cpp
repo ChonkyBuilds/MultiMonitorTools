@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "MMTMainWindow.hpp"
 #include "MMTKeyboardHook.hpp"
@@ -186,6 +186,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     setupOverlays();
     QObject::connect(MonitorManager::instance(), &MonitorManager::monitorInfoRefreshed, this, &MainWindow::onMonitorInfoRefreshed);
     QObject::connect(KeyboardHook::instance(), &KeyboardHook::switchVirtualDesktopHotkeyTriggerd, this, &MainWindow::onSwitchVirtualDesktop);
+    QObject::connect(KeyboardHook::instance(), &KeyboardHook::contextMenuHotkeyTriggered, this, &MainWindow::onContextMenu);
 
     _pinWindowsTimer = new QTimer(this);
     _pinWindowsTimer->setSingleShot(false);
@@ -481,6 +482,104 @@ void MainWindow::restartCursorAdjust()
         CursorAdjust::instance()->exit();
         CursorAdjust::instance()->initiate();
     }
+}
+
+inline void setForegroundForce(HWND hwnd)
+{
+    DWORD currentForegroundThreadID = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+    DWORD myThreadID = GetCurrentThreadId();
+    DWORD hwndID = GetWindowThreadProcessId(hwnd, NULL);
+
+    if (currentForegroundThreadID == 0 || myThreadID == currentForegroundThreadID)
+    {
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
+    }
+    else
+    {
+        AttachThreadInput(myThreadID, currentForegroundThreadID, TRUE);
+        SetForegroundWindow(hwnd);
+        SetFocus(hwnd);
+        AttachThreadInput(myThreadID, currentForegroundThreadID, FALSE);
+    }
+
+    //SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    //SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+}
+
+void MainWindow::onContextMenu()
+{
+    if (_contextMenu && _contextMenu->isVisible()) 
+    {
+        _contextMenu->close();
+    }
+
+    _contextMenu = new QMenu();
+    _contextMenu->setAttribute(Qt::WA_DeleteOnClose);
+
+    auto menuPoint = QCursor::pos();
+
+    POINT pt;
+    pt.x = menuPoint.x();
+    pt.y = menuPoint.y();
+    
+    HWND windowHwnd = GetAncestor(WindowFromPoint(pt), GA_ROOT);
+    auto currentDesktop = VirtualDesktop::instance()->currentDesktop();
+
+    if (windowHwnd)
+    {
+        auto screens = MonitorManager::instance()->screens();
+        for (auto& screen : screens)
+        {
+            _contextMenu->addAction(QString("Move to %1").arg(screen->name()), this, [screen, windowHwnd] { 
+                setForegroundForce(windowHwnd);
+                ShowWindow(windowHwnd, SW_RESTORE);
+                MoveWindow(windowHwnd,
+                    screen->physicalCoordinateRect().x(),
+                    screen->physicalCoordinateRect().y(),
+                    screen->physicalCoordinateRect().width(),
+                    screen->physicalCoordinateRect().height(),
+                    TRUE);
+                ShowWindow(windowHwnd, SW_MAXIMIZE);
+
+                //ShowWindow(hwnd, SW_MAXIMIZE);
+                //SetWindowPos(hwnd, HWND_TOP, screen->physicalCoordinateRect().x(), screen->physicalCoordinateRect().y(),
+                //screen->physicalCoordinateRect().width(), screen->physicalCoordinateRect().height(),  SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+                //SetWindowPos(hwnd, HWND_TOP,
+                //screen->physicalCoordinateRect().x(), screen->physicalCoordinateRect().y(),
+                //screen->physicalCoordinateRect().width(),
+                //screen->physicalCoordinateRect().height(),
+                //SWP_SHOWWINDOW);
+                //QTimer::singleShot(500, [hwnd] {ShowWindow(hwnd, SW_MAXIMIZE);});
+                //ShowWindow(hwnd, SW_RESTORE); 
+
+                });
+        }
+
+        _contextMenu->addSeparator();
+
+        auto desktops = VirtualDesktop::instance()->getDesktops();
+        for (auto& desktop : desktops)
+        {
+            _contextMenu->addAction(VirtualDesktop::instance()->getDesktopName(desktop), this, 
+                [this, desktop, windowHwnd, currentDesktop] 
+                {
+                    setForegroundForce((HWND)_contextMenu->winId());
+                    VirtualDesktop::instance()->moveWindowToDesktop(static_cast<void*>(windowHwnd), desktop);
+
+                    Qt::KeyboardModifiers modifiers = QGuiApplication::keyboardModifiers();
+                    if (modifiers & Qt::ShiftModifier)
+                    {
+                        VirtualDesktop::instance()->moveToDesktop(desktop);
+                    }
+                });
+        }
+
+    }
+
+    setForegroundForce((HWND)_contextMenu->winId());
+    _contextMenu->exec(menuPoint);
+    _contextMenu = nullptr;
 }
 
 }

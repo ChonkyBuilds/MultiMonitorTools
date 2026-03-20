@@ -238,6 +238,9 @@ public:
     void moveToAdjacentDesktop(Direction direction, bool bringWindowInFocus);
     IVirtualDesktop* currentDesktop();
     QString getDesktopName(IVirtualDesktop*);
+    QList<IVirtualDesktop*> getDesktops();
+    void moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop);
+    void moveToDesktop(IVirtualDesktop*);
 
 public:
     void testFunction();
@@ -521,6 +524,53 @@ QString VirtualDesktopImpl::getDesktopName(IVirtualDesktop* desktop)
         return QString("Desktop %1").arg(desktopNumber);
     }
     return name;
+}
+
+QList<IVirtualDesktop*> VirtualDesktopImpl::getDesktops()
+{
+    QList<IVirtualDesktop*> desktops;
+    auto pCurrentDesktop = currentDesktop();
+    
+    IVirtualDesktop* desktopIter = pCurrentDesktop;
+    while(desktopIter)
+    {
+        _virtualDesktopManagerInternal->getAdjacentDesktop(desktopIter, 3, &desktopIter);
+        if (desktopIter)
+        {
+            desktops.prepend(desktopIter);
+        }
+    }
+
+    desktops.append(pCurrentDesktop);
+    
+    desktopIter = pCurrentDesktop;
+    while(desktopIter)
+    {
+        _virtualDesktopManagerInternal->getAdjacentDesktop(desktopIter, 4, &desktopIter);
+        if (desktopIter)
+        {
+            desktops.append(desktopIter);
+        }
+    }
+
+    return desktops;
+}
+
+void VirtualDesktopImpl::moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop)
+{
+    auto view = _applicationViewCollection->getViewForHwnd((HWND)hwnd);
+    if (view)
+    {
+        _virtualDesktopManagerInternal->moveViewToDesktop(view, desktop);
+    }
+}
+
+void VirtualDesktopImpl::moveToDesktop(IVirtualDesktop* desktop)
+{
+    if (desktop)
+    {
+        _virtualDesktopManagerInternal->switchDesktop(desktop);
+    }
 }
 
 VirtualDesktop* VirtualDesktop::instance()

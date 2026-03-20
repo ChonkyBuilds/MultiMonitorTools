@@ -16,6 +16,8 @@ static bool winDown = false;
 static bool shiftDown = false;
 static bool altDown = false;
 
+static bool tabDown = false;
+
 LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
 {
     if (code < 0)
@@ -52,6 +54,17 @@ LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
         if (keyCode == VK_MENU || keyCode == VK_LMENU || keyCode == VK_RMENU)
         {
             altDown = keyDown;
+        }
+
+        if (keyCode == VK_TAB)
+        {
+            tabDown = keyDown;
+        }
+
+        if (ctrlDown && winDown && tabDown)
+        {
+            emit KeyboardHook::instance()->contextMenuHotkeyTriggered();
+            return 1;
         }
 
         if (altDown && winDown)

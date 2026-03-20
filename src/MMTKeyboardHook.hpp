@@ -19,6 +19,7 @@ public slots:
 signals:
     void switchVirtualDesktopHotkeyTriggerd(Direction direction, bool bringWindowInFocus);
     void previewDesktopNameTriggered();
+    void contextMenuHotkeyTriggered();
 
 protected:
     KeyboardHook() = default;

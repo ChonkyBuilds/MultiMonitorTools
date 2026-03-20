@@ -22,6 +22,9 @@ public:
     virtual void moveToAdjacentDesktop(Direction, bool bringWindowInFocus = false) = 0;
     virtual IVirtualDesktop* currentDesktop() = 0;
     virtual QString getDesktopName(IVirtualDesktop*) = 0;
+    virtual QList<IVirtualDesktop*> getDesktops() = 0;
+    virtual void moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop) = 0;
+    virtual void moveToDesktop(IVirtualDesktop*) = 0;
 
 public:
     virtual void testFunction() = 0;

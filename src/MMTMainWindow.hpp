@@ -47,6 +47,7 @@ private slots:
     void onMonitorInfoRefreshed();
     void onAbout();
     void restartCursorAdjust();
+    void onContextMenu();
 
 protected:
     void closeEvent(QCloseEvent* evt) override;
@@ -61,6 +62,7 @@ private:
     QDoubleSpinBox* _gridLineGap = nullptr;
     MonitorConfigWidget* _monitorConfigWidget = nullptr;
     QTimer* _cursorAdjustRestartTimer = nullptr;
+    QMenu* _contextMenu = nullptr;
 };
 
 }
