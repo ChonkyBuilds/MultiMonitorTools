@@ -102,7 +102,7 @@ LRESULT CALLBACK MouseEvent(int nCode, WPARAM wParam, LPARAM lParam)
             {
                 s_cursorAdjustAttempts++;
                 //qDebug() << "intervened " << interveneAttempts << " " <<QString("Target: %1:%2; Current: %3:%4; Speed: %5:%6").arg(s_adjustedX).arg(s_adjustedY).arg(xCoord).arg(yCoord).arg(s_speedX).arg(s_speedY);;
-                PostThreadMessage( GetCurrentThreadId(), WM_USER, (WPARAM)s_adjustedX, (LPARAM)s_adjustedY );
+                PostThreadMessage( GetCurrentThreadId(), WM_USER + 1, (WPARAM)s_adjustedX, (LPARAM)s_adjustedY );
                 return CallNextHookEx(0, nCode, wParam, lParam);
             }
             else
@@ -374,7 +374,13 @@ public:
             {
                 if( msg.message == WM_USER ) 
                 {
-                    SetPhysicalCursorPos( (int)msg.wParam, (int)msg.lParam );
+                    SetPhysicalCursorPos((int)msg.wParam, (int)msg.lParam);
+                }
+                else if (msg.message == WM_USER + 1)
+                {
+                    //This masks issues related to windows sessions changes, so temporarily disabled
+                    //Sleep(1);
+                    SetPhysicalCursorPos((int)msg.wParam, (int)msg.lParam);
                 }
             } 
             else 

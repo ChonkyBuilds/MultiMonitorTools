@@ -35,6 +35,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <wtsapi32.h>
+#pragma comment(lib, "Wtsapi32.lib")
 
 namespace MMT {
 
@@ -45,6 +47,25 @@ public:
     {
         setFrameShape(QFrame::VLine);
         setFrameShadow(QFrame::Raised);
+    }
+};
+
+class WindowsSessionWatcher : public QAbstractNativeEventFilter
+{
+public:
+    std::function<void()> onSessionChanged = nullptr;
+    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *) override
+    {
+        if (eventType == "windows_generic_MSG")
+        {
+            MSG* msg = static_cast<MSG*>(message);
+
+            if (msg->message == WM_WTSSESSION_CHANGE)
+            {
+                if (onSessionChanged) onSessionChanged();
+            }
+        }
+        return false;
     }
 };
 
@@ -198,6 +219,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     _cursorAdjustRestartTimer->setSingleShot(true);
     _cursorAdjustRestartTimer->setInterval(1000);
     QObject::connect(_cursorAdjustRestartTimer, &QTimer::timeout, this, &MainWindow::restartCursorAdjust);
+
+    WindowsSessionWatcher* watcher = new WindowsSessionWatcher;
+    watcher->onSessionChanged = [this]()
+        {
+            _cursorAdjustRestartTimer->start(1000);
+        };
+    
+    qApp->installNativeEventFilter(watcher);
+    WTSRegisterSessionNotification(HWND(winId()), NOTIFY_FOR_THIS_SESSION);
 
     QMetaObject::invokeMethod(this, "onEventLoopStarted");
 }
@@ -479,6 +509,7 @@ void MainWindow::restartCursorAdjust()
 {
     if (Settings::instance()->cursorAdjustEnabled())
     {
+        qDebug() << "CursorAdjust restarted";
         CursorAdjust::instance()->exit();
         CursorAdjust::instance()->initiate();
     }
