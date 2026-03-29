@@ -107,6 +107,10 @@ LRESULT CALLBACK MouseEvent(int nCode, WPARAM wParam, LPARAM lParam)
             }
             else
             {
+                if (s_cursorAdjustAttempts >= s_cursorAdjustAttemptLimit)
+                {
+                    PostThreadMessage( GetCurrentThreadId(), WM_USER + 2, 0, 0);
+                }
                 s_cursorAdjustAttempts = 0;
                 s_verifyCursorAdjust = false;
             }
@@ -365,6 +369,8 @@ public:
 
         auto mouseHook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)MouseEvent, NULL, 0);
 
+        auto attachInputDesktopTimestamp = GetTickCount64();
+
         MSG msg;
         LPARAM lparam;
         WPARAM wparam;
@@ -378,9 +384,29 @@ public:
                 }
                 else if (msg.message == WM_USER + 1)
                 {
-                    //This masks issues related to windows sessions changes, so temporarily disabled
-                    //Sleep(1);
+                    auto currentTimestamp = GetTickCount64();
+                    if (currentTimestamp - attachInputDesktopTimestamp > 2000)
+                    {
+                        UnhookWindowsHookEx(mouseHook);
+                        HDESK hInput = OpenInputDesktop(0, FALSE, GENERIC_ALL);
+                        if (hInput) 
+                        {
+                            SetThreadDesktop(hInput);
+                            CloseDesktop(hInput);
+                        }
+                        else
+                        {
+                            qWarning() << "OpenInputDesktop Fail!";
+                        }
+                        mouseHook = SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)MouseEvent, NULL, 0);
+                        attachInputDesktopTimestamp = currentTimestamp;
+                    }
+
                     SetPhysicalCursorPos((int)msg.wParam, (int)msg.lParam);
+                }
+                else if (msg.message == WM_USER + 2)
+                {
+                    qCritical() << "CursorAdjust fail!";
                 }
             } 
             else 
