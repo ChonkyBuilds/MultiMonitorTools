@@ -8,6 +8,7 @@
 #include "MMTSettings.hpp"
 #include "MMTMonitorConfigWidget.hpp"
 #include "MMTScreenOverlay.hpp"
+#include "MMTHotkeys.hpp"
 
 #include <QHboxLayout>
 #include <QPushButton>
@@ -73,6 +74,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
     qRegisterMetaType<Direction>("Direction");
     qRegisterMetaType<Screen>("Screen");
+    qRegisterMetaType<Hotkey>("Hotkey");
 
     qApp->setFont(QFont("Segoe UI"));
 
@@ -206,8 +208,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     setupOverlays();
     QObject::connect(MonitorManager::instance(), &MonitorManager::monitorInfoRefreshed, this, &MainWindow::onMonitorInfoRefreshed);
-    QObject::connect(KeyboardHook::instance(), &KeyboardHook::switchVirtualDesktopHotkeyTriggerd, this, &MainWindow::onSwitchVirtualDesktop);
-    QObject::connect(KeyboardHook::instance(), &KeyboardHook::contextMenuHotkeyTriggered, this, &MainWindow::onContextMenu);
+
+    HotkeyManager::instance()->loadHotkeys();
+    QObject::connect(KeyboardHook::instance(), &KeyboardHook::hotkeyTriggered, this, &MainWindow::onHotkeyTriggered);
 
     _pinWindowsTimer = new QTimer(this);
     _pinWindowsTimer->setSingleShot(false);
@@ -470,7 +473,6 @@ void MainWindow::setupOverlays()
     for (auto& overlay : _screenOverlays)
     {
         overlay->show();
-        QObject::connect(KeyboardHook::instance(), &KeyboardHook::previewDesktopNameTriggered, overlay.get(), &ScreenOverlay::showDesktopName);
     }
 }
 
@@ -611,6 +613,36 @@ void MainWindow::onContextMenu()
     setForegroundForce((HWND)_contextMenu->winId());
     _contextMenu->exec(menuPoint);
     _contextMenu = nullptr;
+}
+
+void MainWindow::onHotkeyTriggered(const Hotkey& hotkey)
+{
+    switch(hotkey.command)
+    {
+    case Command::SwitchToLeftDesktop:
+        onSwitchVirtualDesktop(Direction::Left, false);
+        break;
+    case Command::SwitchToRightDesktop:
+        onSwitchVirtualDesktop(Direction::Right, false);
+        break;
+    case Command::ShowDesktopName:
+        for (auto& overlay : _screenOverlays)
+        {
+            overlay->showDesktopName();
+        }
+        break;
+    case Command::SwitchToLeftDesktopWithWindow:
+        onSwitchVirtualDesktop(Direction::Left, true);
+        break;
+    case Command::SwitchToRightDesktopWithWindow:
+        onSwitchVirtualDesktop(Direction::Right, true);
+        break;
+    case Command::ContextMenu:
+        onContextMenu();
+        break;
+    default:
+        break;
+    }
 }
 
 }

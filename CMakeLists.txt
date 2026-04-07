@@ -69,6 +69,7 @@ set(SOURCES
     src/MMTMonitorManager.cpp
     src/MMTMonitorConfigWidget.cpp
     src/MMTSettings.cpp
+	src/MMTHotkeys.cpp
 )
 
 # --- Headers ---
@@ -83,7 +84,7 @@ set(HEADERS
     src/MMTMonitorLayoutEditor.hpp
     src/MMTMonitorManager.hpp
     src/MMTMonitorConfigWidget.hpp
-    
+    src/MMTHotkeys.hpp
 )
 
 # --- VirtualDesktopAPI ---

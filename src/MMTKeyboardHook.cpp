@@ -1,5 +1,6 @@
 #include "MMTKeyboardHook.hpp"
 #include "MMTVirtualDesktop.hpp"
+#include "MMTHotkeys.hpp"
 
 #include <qDebug>
 #include <QThread>
@@ -9,14 +10,12 @@
 
 namespace MMT {
 
-static bool leftDown = false;
-static bool rightDown = false;
 static bool ctrlDown = false;
 static bool winDown = false;
 static bool shiftDown = false;
 static bool altDown = false;
 
-static bool tabDown = false;
+static bool keysDown[256];
 
 LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
 {
@@ -36,7 +35,12 @@ LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
         KBDLLHOOKSTRUCT* kbdStruct = (KBDLLHOOKSTRUCT*)lParam;
         DWORD keyCode = kbdStruct->vkCode;
 
-        if (keyCode == VK_LCONTROL || keyCode == VK_RCONTROL)
+        if (keyCode < 0 || keyCode > 255)
+        {
+            return CallNextHookEx(0, code, wParam, lParam);
+        }
+
+        if (keyCode == VK_LCONTROL || keyCode == VK_RCONTROL || keyCode == VK_CONTROL)
         {
             ctrlDown = keyDown;
         }
@@ -46,7 +50,7 @@ LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
             winDown = keyDown;
         }
         
-        if (keyCode == VK_LSHIFT || keyCode == VK_RSHIFT)
+        if (keyCode == VK_LSHIFT || keyCode == VK_RSHIFT || keyCode == VK_SHIFT)
         {
             shiftDown = keyDown;
         }
@@ -56,51 +60,43 @@ LRESULT keyboardHook(const int code, const WPARAM wParam, const LPARAM lParam)
             altDown = keyDown;
         }
 
-        if (keyCode == VK_TAB)
+        Hotkey noTriggerHotkey;
+        if (ctrlDown) noTriggerHotkey.modifier = noTriggerHotkey.modifier | Modifier::Control;
+        if (winDown) noTriggerHotkey.modifier = noTriggerHotkey.modifier | Modifier::Windows;
+        if (altDown) noTriggerHotkey.modifier = noTriggerHotkey.modifier | Modifier::Alt;
+        if (shiftDown) noTriggerHotkey.modifier = noTriggerHotkey.modifier | Modifier::Shift;
+        noTriggerHotkey.triggerKey = 0;
+
+        if (HotkeyManager::instance()->findHotkey(noTriggerHotkey))
         {
-            tabDown = keyDown;
+            emit KeyboardHook::instance()->hotkeyTriggered(noTriggerHotkey);
         }
 
-        if (ctrlDown && winDown && tabDown)
+        if (keyDown)
         {
-            emit KeyboardHook::instance()->contextMenuHotkeyTriggered();
-            return 1;
-        }
+            Hotkey currentHotkey;
+            if (ctrlDown) currentHotkey.modifier = currentHotkey.modifier | Modifier::Control;
+            if (winDown) currentHotkey.modifier = currentHotkey.modifier | Modifier::Windows;
+            if (altDown) currentHotkey.modifier = currentHotkey.modifier | Modifier::Alt;
+            if (shiftDown) currentHotkey.modifier = currentHotkey.modifier | Modifier::Shift;
+            currentHotkey.triggerKey = keyCode;
 
-        if (altDown && winDown)
-        {
-            emit KeyboardHook::instance()->previewDesktopNameTriggered();
-        }
-
-        if (keyCode == VK_LEFT)
-        {
-            if (keyDown && ctrlDown && winDown)
+            if (HotkeyManager::instance()->findHotkey(currentHotkey))
             {
-                if (!leftDown)
+                if (currentHotkey.rapidFire || !keysDown[keyCode])
                 {
-                    leftDown = true;
-                    emit KeyboardHook::instance()->switchVirtualDesktopHotkeyTriggerd(Direction::Left, shiftDown);
+                    emit KeyboardHook::instance()->hotkeyTriggered(currentHotkey);
                 }
-                return 1;
-            }
+                keysDown[keyCode] = keyDown;
 
-            leftDown = keyDown;
+                if (!currentHotkey.callNextHook)
+                {
+                    return 1;
+                }
+            }
         }
 
-        if (keyCode == VK_RIGHT)
-        {
-            if (keyDown && ctrlDown && winDown)
-            {
-                if (!rightDown)
-                {
-                    rightDown = true;
-                    emit KeyboardHook::instance()->switchVirtualDesktopHotkeyTriggerd(Direction::Right, shiftDown);
-                }
-                return 1;
-            }
-
-            rightDown = keyDown;
-        }
+        keysDown[keyCode] = keyDown;
     }
 
     return CallNextHookEx(0, code, wParam, lParam);
@@ -121,11 +117,14 @@ public:
 
     void run()
     {
-        leftDown = GetKeyState(VK_LEFT) < 0;
-        rightDown = GetKeyState(VK_RIGHT) < 0;
-        ctrlDown = GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_LCONTROL) < 0;
+        for (int i = 0; i < 256; i++)
+        {
+            keysDown[i] = GetKeyState(i) < 0;
+        }
+        ctrlDown = GetKeyState(VK_LCONTROL) < 0 || GetKeyState(VK_RCONTROL) < 0 || GetKeyState(VK_CONTROL) < 0;
         winDown = GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0;
-        shiftDown = GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0;
+        shiftDown = GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0 || GetKeyState(VK_SHIFT) < 0;
+        altDown = GetKeyState(VK_LMENU) < 0 || GetKeyState(VK_RMENU) < 0 || GetKeyState(VK_MENU) < 0;
 
         auto hook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)keyboardHook, NULL, 0);
         if (hook == NULL) 

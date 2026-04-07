@@ -6,6 +6,8 @@
 namespace MMT
 {
 
+struct Hotkey;
+
 class KeyboardHook : public QObject
 {
     Q_OBJECT
@@ -17,9 +19,7 @@ public slots:
     virtual void exit() = 0;
 
 signals:
-    void switchVirtualDesktopHotkeyTriggerd(Direction direction, bool bringWindowInFocus);
-    void previewDesktopNameTriggered();
-    void contextMenuHotkeyTriggered();
+    void hotkeyTriggered(const Hotkey&);
 
 protected:
     KeyboardHook() = default;
