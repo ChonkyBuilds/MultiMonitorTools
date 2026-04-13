@@ -290,6 +290,15 @@ public:
         }
         return result;
     }
+    QStringList hardwareEDIDHeaders() const override
+    {
+        QStringList result;
+        for (auto& info : _hardwareInfo)
+        {
+            result << info.edidHeader;
+        }
+        return result;
+    }
     bool isValid() const override
     {
         return _isValid;

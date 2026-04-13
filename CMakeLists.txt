@@ -13,7 +13,7 @@ if(CMAKE_SYSTEM_VERSION VERSION_LESS "10.0.22621.0")
     message(FATAL_ERROR "Windows SDK too old: ${CMAKE_SYSTEM_VERSION}. Need at least 10.0.22621.0")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -70,6 +70,7 @@ set(SOURCES
     src/MMTMonitorConfigWidget.cpp
     src/MMTSettings.cpp
 	src/MMTHotkeys.cpp
+	src/MMTHotkeyEditor.cpp
 )
 
 # --- Headers ---
@@ -85,6 +86,7 @@ set(HEADERS
     src/MMTMonitorManager.hpp
     src/MMTMonitorConfigWidget.hpp
     src/MMTHotkeys.hpp
+	src/MMTHotkeyEditor.hpp
 )
 
 # --- VirtualDesktopAPI ---
@@ -140,7 +142,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 			--no-system-dxc-compiler
 			--no-system-d3d-compiler
 			--no-network
-			--no-svg
 			--exclude-plugins qjpeg,qgif
             "$<TARGET_FILE:${PROJECT_NAME}>"
     COMMENT "Deploying Qt runtime..."

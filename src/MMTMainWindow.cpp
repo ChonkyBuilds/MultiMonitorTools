@@ -9,6 +9,7 @@
 #include "MMTMonitorConfigWidget.hpp"
 #include "MMTScreenOverlay.hpp"
 #include "MMTHotkeys.hpp"
+#include "MMTHotkeyEditor.hpp"
 
 #include <QHboxLayout>
 #include <QPushButton>
@@ -142,15 +143,19 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     QObject::connect(_logLevel, &QComboBox::currentTextChanged, this, &MainWindow::onLogLevelChanged);
 
-    auto aboutBuutton = new QPushButton("About");
-    QObject::connect(aboutBuutton, &QPushButton::clicked, this, &MainWindow::onAbout);
+    auto aboutButton = new QPushButton("About");
+    QObject::connect(aboutButton, &QPushButton::clicked, this, &MainWindow::onAbout);
+
+    auto hotkeyEditorButton = new QPushButton("Hotkeys");
+    QObject::connect(hotkeyEditorButton, &QPushButton::clicked, this, &MainWindow::onEditHotkeys);
 
     auto logLevelWidget = new QWidget;
     auto logLevelWidgetLayout = new QHBoxLayout(logLevelWidget);
     logLevelWidgetLayout->setContentsMargins(0, 0, 0, 0);
     logLevelWidgetLayout->addWidget(new QLabel("Log level:"));
     logLevelWidgetLayout->addWidget(_logLevel);
-    statusBar()->addPermanentWidget(aboutBuutton);
+    statusBar()->addPermanentWidget(hotkeyEditorButton);
+    statusBar()->addPermanentWidget(aboutButton);
     statusBar()->addPermanentWidget(logLevelWidget);
     statusBar()->addPermanentWidget(toggleOutputConsole);
 
@@ -492,9 +497,28 @@ void MainWindow::onAbout()
     label->setTextFormat(Qt::RichText);
     label->setTextInteractionFlags(Qt::TextBrowserInteraction);
     label->setOpenExternalLinks(true);
-    label->setText(QString("MultiMonitorTools V%1.<br>Licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.en.html'>GPLv3 license</a>.<br>Visit this <a href='https://github.com/ChonkyBuilds/MultiMonitorTools'>github page</a> to check for updates or report bugs.").arg(VERSION));
+    label->setText(QString("<b>MultiMonitorTools V%1.</b><br>Licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.en.html'>GPLv3 license</a>.<br>Visit this <a href='https://github.com/ChonkyBuilds/MultiMonitorTools'>github page</a> to check for updates or report bugs.").arg(VERSION));
     label->setWordWrap(false);
     layout->addWidget(label);
+
+    QStringList attributes;
+    attributes << "https://www.svgrepo.com/svg/522525/edit-2";
+    attributes << "https://www.svgrepo.com/svg/506459/delete-left";
+
+    auto attributesLabel = new QLabel();
+    attributesLabel->setTextFormat(Qt::RichText);
+    attributesLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    attributesLabel->setOpenExternalLinks(true);
+
+    QString attributeString = "<i>Attributions:</i>";
+    for (auto& attribute : attributes)
+    {
+        attributeString = attributeString + QString("<br><a href='%1'>%1</a>").arg(attribute);
+    }
+
+    attributesLabel->setText(attributeString);
+    attributesLabel->setWordWrap(false);
+    layout->addWidget(attributesLabel);
 
     auto aboutQtLayout = new QHBoxLayout;
     auto aboutQtButton = new QPushButton("About Qt");
@@ -505,6 +529,12 @@ void MainWindow::onAbout()
     layout->addLayout(aboutQtLayout);
     layout->addStretch();
     dlg.exec();
+}
+
+void MainWindow::onEditHotkeys()
+{
+    HotkeyEditor editor;
+    editor.exec();
 }
 
 void MainWindow::restartCursorAdjust()

@@ -28,6 +28,7 @@ public:
     virtual QRect logicalCoordinateRect() const = 0;
     virtual QString name() const = 0;
     virtual QList<QString> hardwareNames() const = 0;
+    virtual QList<QString> hardwareEDIDHeaders() const = 0;
     virtual bool isValid() const = 0;
     virtual bool isPrimary() const = 0;
     virtual QPixmap captureScreenShot() = 0;

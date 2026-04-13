@@ -27,6 +27,13 @@ enum class Command
     ContextMenu
 };
 
+class CommandHelper
+{
+public:
+    static QString getDescription(Command);
+    static int enumCount();
+};
+
 enum class Modifier : uint8_t
 {
     None    = 0,
@@ -42,10 +49,10 @@ inline Modifier operator|(Modifier lhs, Modifier rhs)
     return static_cast<Modifier>(static_cast<T>(lhs) | static_cast<T>(rhs));
 }
 
-inline Modifier operator&(Modifier lhs, Modifier rhs) 
+inline bool operator&(Modifier lhs, Modifier rhs) 
 {
     using T = std::underlying_type_t<Modifier>;
-    return static_cast<Modifier>(static_cast<T>(lhs) & static_cast<T>(rhs));
+    return static_cast<T>(lhs) & static_cast<T>(rhs);
 }
 
 struct Hotkey
@@ -56,12 +63,13 @@ struct Hotkey
     bool rapidFire = false;
     Command command = Command::Undefined;
     QStringList arguments;
+    bool persistent = false;
 
     Hotkey()
     {
     }
 
-    Hotkey(Modifier m, uint8_t tk, bool cnh, bool rf, Command c, const QStringList& arg) : modifier(m), triggerKey(tk), callNextHook(cnh), rapidFire(rf), command(c), arguments(arg)
+    Hotkey(Modifier m, uint8_t tk, bool cnh, bool rf, Command c, const QStringList& arg, bool p = false) : modifier(m), triggerKey(tk), callNextHook(cnh), rapidFire(rf), command(c), arguments(arg), persistent(p)
     {
     }
 };
@@ -78,6 +86,7 @@ public:
     virtual std::vector<Hotkey> hotkeys() const = 0;
     virtual bool addHotkey(const Hotkey&) = 0;
     virtual bool removeHotkey(const Hotkey&) = 0;
+    virtual void removeAllHotkeys() = 0;
 
 protected:
     HotkeyManager() = default;

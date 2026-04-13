@@ -47,6 +47,7 @@ private slots:
     void setupOverlays();
     void onMonitorInfoRefreshed();
     void onAbout();
+    void onEditHotkeys();
     void restartCursorAdjust();
     void onContextMenu();
     void onHotkeyTriggered(const Hotkey&);
