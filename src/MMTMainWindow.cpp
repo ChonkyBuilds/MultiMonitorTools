@@ -803,6 +803,16 @@ void moveWindowToScreen(HWND windowHwnd, Screen* screen)
 
         MoveWindow(windowHwnd, finalRect.left, finalRect.top, finalRect.right - finalRect.left, finalRect.bottom - finalRect.top, TRUE);
         MoveWindow(windowHwnd, finalRect.left, finalRect.top, finalRect.right - finalRect.left, finalRect.bottom - finalRect.top, TRUE);
+
+        auto aerosnapInfo = getAerosnapInfo(windowHwnd);
+        if (aerosnapInfo.isAeroSnapped())
+        {
+            if (aerosnapInfo.snappedLeft) finalRect.left = finalRect.left + 1;
+            if (aerosnapInfo.snappedRight) finalRect.right = finalRect.right - 1;
+            if (aerosnapInfo.snappedTop) finalRect.top = finalRect.top + 1;
+            if (aerosnapInfo.snappedBottom) finalRect.bottom = finalRect.bottom - 1;
+            MoveWindow(windowHwnd, finalRect.left, finalRect.top, finalRect.right - finalRect.left, finalRect.bottom - finalRect.top, TRUE);
+        }
     }
 }
 
