@@ -240,7 +240,8 @@ public:
     QString getDesktopName(IVirtualDesktop*);
     QList<IVirtualDesktop*> getDesktops();
     void moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop);
-    void moveToDesktop(IVirtualDesktop*);
+    void moveToDesktop(IVirtualDesktop* targetDesktop, bool bringWindowInFocus);
+    IVirtualDesktop* getDesktopByName(const QString& name);
 
 public:
     void testFunction();
@@ -416,7 +417,7 @@ void VirtualDesktopImpl::pinWindowsOnScreen(const QList<Screen*>& screens)
             if (!_virtualDesktopPinnedApps->isViewPinned(view))
             {
                 _virtualDesktopPinnedApps->pinView(view);
-                qDebug() << "pinned: " << getWindowTitle(hwnd);
+                //qDebug() << "pinned: " << getWindowTitle(hwnd);
             }
         }
         else
@@ -424,7 +425,7 @@ void VirtualDesktopImpl::pinWindowsOnScreen(const QList<Screen*>& screens)
             if (_virtualDesktopPinnedApps->isViewPinned(view))
             {
                 _virtualDesktopPinnedApps->unpinView(view);
-                qDebug() << "unpinned: " << getWindowTitle(hwnd);
+                //qDebug() << "unpinned: " << getWindowTitle(hwnd);
             }
         }
     }
@@ -446,53 +447,7 @@ void VirtualDesktopImpl::moveToAdjacentDesktop(Direction direction, bool bringWi
     _virtualDesktopManagerInternal->getAdjacentDesktop(_virtualDesktopManagerInternal->getCurrentDesktop(), directionCode, &targetDesktop);
     if (targetDesktop != nullptr)
     {
-        auto targetDesktopGuid = _virtualDesktopInterface->getId(targetDesktop);
-        auto currentDesktopGuid = _virtualDesktopInterface->getId(_virtualDesktopManagerInternal->getCurrentDesktop());
-
-        HWND hwnd = GetTopWindow(NULL);
-        while (hwnd) 
-        {    
-            GUID desktopId{};
-            if(SUCCEEDED(_virtualDesktopManager->GetWindowDesktopId(hwnd, &desktopId)))
-            {
-                if (desktopId == targetDesktopGuid)
-                {
-                    new ThreadAttacher(hwnd, qApp);
-                    break;
-                }
-            }
-            hwnd = GetWindow(hwnd, GW_HWNDNEXT);
-        }
-
-        hwnd = GetTopWindow(NULL);
-        while (hwnd) 
-        {    
-            GUID desktopId{};
-            if(SUCCEEDED(_virtualDesktopManager->GetWindowDesktopId(hwnd, &desktopId)))
-            {
-                if (desktopId == currentDesktopGuid)
-                {
-                    new ThreadAttacher(hwnd, qApp);
-                    break;
-                }
-            }
-            hwnd = GetWindow(hwnd, GW_HWNDNEXT);
-        }
-
-        if (bringWindowInFocus)
-        {
-            auto currentWindowInFocusHwnd = GetForegroundWindow();
-            if (currentWindowInFocusHwnd && VisibleInTaskSwitcher(currentWindowInFocusHwnd))
-            {
-                auto viewInFocus = _applicationViewCollection->getViewForHwnd(currentWindowInFocusHwnd);
-                if (viewInFocus && !_virtualDesktopPinnedApps->isViewPinned(viewInFocus))
-                {
-                    _virtualDesktopManagerInternal->moveViewToDesktop(viewInFocus, targetDesktop);
-                }
-            }            
-        }
-
-        _virtualDesktopManagerInternal->switchDesktop(targetDesktop);
+        moveToDesktop(targetDesktop, bringWindowInFocus);
     }
 }
 
@@ -558,19 +513,85 @@ QList<IVirtualDesktop*> VirtualDesktopImpl::getDesktops()
 
 void VirtualDesktopImpl::moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop)
 {
-    auto view = _applicationViewCollection->getViewForHwnd((HWND)hwnd);
-    if (view)
+    if (hwnd && VisibleInTaskSwitcher((HWND)hwnd))
     {
-        _virtualDesktopManagerInternal->moveViewToDesktop(view, desktop);
+        auto view = _applicationViewCollection->getViewForHwnd((HWND)hwnd);
+        if (view && !_virtualDesktopPinnedApps->isViewPinned(view))
+        {
+            _virtualDesktopManagerInternal->moveViewToDesktop(view, desktop);
+        }
     }
 }
 
-void VirtualDesktopImpl::moveToDesktop(IVirtualDesktop* desktop)
+void VirtualDesktopImpl::moveToDesktop(IVirtualDesktop* targetDesktop, bool bringWindowInFocus)
 {
-    if (desktop)
+    if (targetDesktop != nullptr)
     {
-        _virtualDesktopManagerInternal->switchDesktop(desktop);
+        auto targetDesktopGuid = _virtualDesktopInterface->getId(targetDesktop);
+        auto currentDesktopGuid = _virtualDesktopInterface->getId(_virtualDesktopManagerInternal->getCurrentDesktop());
+
+        HWND hwnd = GetTopWindow(NULL);
+        while (hwnd) 
+        {    
+            GUID desktopId{};
+            if(SUCCEEDED(_virtualDesktopManager->GetWindowDesktopId(hwnd, &desktopId)))
+            {
+                if (desktopId == targetDesktopGuid)
+                {
+                    new ThreadAttacher(hwnd, qApp);
+                    break;
+                }
+            }
+            hwnd = GetWindow(hwnd, GW_HWNDNEXT);
+        }
+
+        hwnd = GetTopWindow(NULL);
+        while (hwnd) 
+        {    
+            GUID desktopId{};
+            if(SUCCEEDED(_virtualDesktopManager->GetWindowDesktopId(hwnd, &desktopId)))
+            {
+                if (desktopId == currentDesktopGuid)
+                {
+                    new ThreadAttacher(hwnd, qApp);
+                    break;
+                }
+            }
+            hwnd = GetWindow(hwnd, GW_HWNDNEXT);
+        }
+
+        if (bringWindowInFocus)
+        {
+            auto currentWindowInFocusHwnd = GetForegroundWindow();
+            if (currentWindowInFocusHwnd && VisibleInTaskSwitcher(currentWindowInFocusHwnd))
+            {
+                auto viewInFocus = _applicationViewCollection->getViewForHwnd(currentWindowInFocusHwnd);
+                if (viewInFocus && !_virtualDesktopPinnedApps->isViewPinned(viewInFocus))
+                {
+                    _virtualDesktopManagerInternal->moveViewToDesktop(viewInFocus, targetDesktop);
+                }
+            }            
+        }
+
+        _virtualDesktopManagerInternal->switchDesktop(targetDesktop);
     }
+}
+
+IVirtualDesktop* VirtualDesktopImpl::getDesktopByName(const QString& name)
+{
+    IVirtualDesktop* targetDesktop = nullptr;
+
+    auto desktops = VirtualDesktop::instance()->getDesktops();
+    for (auto& desktop : desktops)
+    {
+        if (name == VirtualDesktop::instance()->getDesktopName(desktop))
+        {
+            targetDesktop = desktop;
+            break;
+        }
+    }
+
+    return targetDesktop;
 }
 
 VirtualDesktop* VirtualDesktop::instance()

@@ -24,7 +24,8 @@ public:
     virtual QString getDesktopName(IVirtualDesktop*) = 0;
     virtual QList<IVirtualDesktop*> getDesktops() = 0;
     virtual void moveWindowToDesktop(void* hwnd, IVirtualDesktop* desktop) = 0;
-    virtual void moveToDesktop(IVirtualDesktop*) = 0;
+    virtual IVirtualDesktop* getDesktopByName(const QString& name) = 0;
+    virtual void moveToDesktop(IVirtualDesktop* desktop, bool bringWindowInFocus = false) = 0;
 
 public:
     virtual void testFunction() = 0;

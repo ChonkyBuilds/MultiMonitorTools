@@ -36,9 +36,14 @@
 #include <QCheckBox>
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #include <wtsapi32.h>
 #pragma comment(lib, "Wtsapi32.lib")
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi.lib")
+#include <ShellScalingApi.h>
+#pragma comment(lib, "Shcore.lib")
 
 namespace MMT {
 
@@ -546,7 +551,67 @@ void MainWindow::restartCursorAdjust()
     }
 }
 
-inline void setForegroundForce(HWND hwnd)
+namespace
+{
+
+QString getWindowTitle(HWND hwnd)
+{
+    int length = GetWindowTextLengthW(hwnd);
+    wchar_t* buffer = new wchar_t[length + 1];
+    GetWindowTextW(hwnd, buffer, length + 1);
+    QString title = QString::fromWCharArray(buffer, length);
+    delete[] buffer;
+    return title;
+}
+
+bool windowCanBeMoved(HWND window) 
+{
+    if (!window || !IsWindow(window) || !IsWindowVisible(window))
+    {
+        return false;
+    }
+
+    HWND root = GetAncestor(window, GA_ROOT);
+
+    if (GetWindow(root, GW_OWNER) != NULL) 
+    {
+        //removes sub windows like dialog boxes
+        //return false;
+    }
+
+    if (root == NULL || !IsWindowVisible(root)) {
+        return false;
+    }
+
+    long style = GetWindowLong(root, GWL_EXSTYLE);
+
+    if (style & WS_EX_APPWINDOW) {
+        return true;
+    }
+
+    if (style & WS_EX_TOOLWINDOW) {
+        return false;
+    }
+
+    INT nCloaked;
+    DwmGetWindowAttribute(window, DWMWA_CLOAKED, &nCloaked, sizeof(nCloaked));
+    if (nCloaked)
+    {
+        return false;
+    }
+
+    char classNameBuffer[256];
+    GetClassNameA(root, classNameBuffer, sizeof(classNameBuffer));
+    std::string className(classNameBuffer);
+    if (className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Shell_SecondaryTrayWnd") 
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void setForegroundForce(HWND hwnd)
 {
     DWORD currentForegroundThreadID = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
     DWORD myThreadID = GetCurrentThreadId();
@@ -569,7 +634,181 @@ inline void setForegroundForce(HWND hwnd)
     //SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
 }
 
-void MainWindow::onContextMenu()
+double getMonitorScaling(HMONITOR hMonitor) 
+{
+    UINT dpiX, dpiY;
+    HRESULT hr = GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY);
+
+    if (SUCCEEDED(hr)) 
+    {
+        return static_cast<double>(dpiX) / 96.0;
+    }
+
+    return 1.0; // Fallback to 100% if call fails
+}
+
+struct AerosnapInfo
+{
+    double xScale = 1;
+    double yScale = 1;
+    double widthScale = 1;
+    double heightScale = 1;
+    bool snappedTop = false;
+    bool snappedBottom = false;
+    bool snappedLeft = false;
+    bool snappedRight = false;
+
+    bool isAeroSnapped()
+    {
+        if (snappedBottom && snappedTop) return true;
+        bool snappedVertically = false;
+        bool snappedHorizontally = false;
+        if (snappedBottom || snappedTop) snappedVertically = true;
+        if (snappedLeft || snappedRight) snappedHorizontally = true;
+        if (snappedVertically && snappedHorizontally)
+        {
+            return true;
+        }
+        return false;
+    }
+};
+
+AerosnapInfo getAerosnapInfo(HWND windowHwnd)
+{
+    AerosnapInfo result;
+    RECT windowRect;
+    HRESULT hr = DwmGetWindowAttribute(windowHwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &windowRect, sizeof(RECT));
+    if (FAILED(hr)) 
+    {
+        qWarning() << "DwmGetWindowAttribute failed!";
+        return result;
+    }
+
+    HMONITOR windowMonitor = MonitorFromWindow(windowHwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitorInfo = { sizeof(MONITORINFO) };
+    GetMonitorInfoA(windowMonitor, &monitorInfo);
+    RECT monitorWorkRect = monitorInfo.rcWork;
+
+    result.xScale = double(windowRect.left - monitorWorkRect.left) / double(monitorWorkRect.right - monitorWorkRect.left);
+    result.yScale = double(windowRect.top - monitorWorkRect.top) / double(monitorWorkRect.bottom - monitorWorkRect.top);
+    result.widthScale = double(windowRect.right - windowRect.left) / double(monitorWorkRect.right - monitorWorkRect.left);
+    result.heightScale = double(windowRect.bottom - windowRect.top) / double(monitorWorkRect.bottom - monitorWorkRect.top);
+
+    if (windowRect.top == monitorWorkRect.top) result.snappedTop = true;
+    if (windowRect.bottom == monitorWorkRect.bottom) result.snappedBottom = true;
+    if (windowRect.left == monitorWorkRect.left) result.snappedLeft = true;
+    if (windowRect.right == monitorWorkRect.right) result.snappedRight = true;
+
+    return result;
+}
+
+void moveWindowToScreen(HWND windowHwnd, Screen* screen)
+{
+    if (!windowCanBeMoved(windowHwnd))
+    {
+        qDebug() << "can't move this window: " << getWindowTitle(windowHwnd);
+        return;
+    }
+    WINDOWPLACEMENT windowPlacement = { sizeof(WINDOWPLACEMENT) };
+    if (!GetWindowPlacement(windowHwnd, &windowPlacement)) return;
+
+    if (windowPlacement.showCmd == SW_SHOWMAXIMIZED)
+    {
+        ShowWindow(windowHwnd, SW_RESTORE);
+        MoveWindow(windowHwnd, screen->physicalCoordinateRect().x(), screen->physicalCoordinateRect().y(), screen->physicalCoordinateRect().width(), screen->physicalCoordinateRect().height(), TRUE);
+        ShowWindow(windowHwnd, SW_MAXIMIZE);
+        return;
+    }
+
+    AerosnapInfo aerosnapInfo = getAerosnapInfo(windowHwnd);
+    if (aerosnapInfo.isAeroSnapped())
+    {
+        MONITORINFO targetMonitorInfo = { sizeof(MONITORINFO) };
+        GetMonitorInfoA(HMONITOR(screen->getNativeHandle()), &targetMonitorInfo);
+        RECT targetRect = targetMonitorInfo.rcWork;
+
+        RECT scaledTargetRect;
+        scaledTargetRect.left = targetRect.left + (targetRect.right - targetRect.left) * aerosnapInfo.xScale;
+        scaledTargetRect.top = targetRect.top + (targetRect.bottom - targetRect.top) * aerosnapInfo.yScale;
+        scaledTargetRect.right = scaledTargetRect.left + (targetRect.right - targetRect.left) * aerosnapInfo.widthScale;
+        scaledTargetRect.bottom = scaledTargetRect.top + (targetRect.bottom - targetRect.top) * aerosnapInfo.heightScale;
+
+        if (aerosnapInfo.snappedLeft) scaledTargetRect.left = targetRect.left;
+        if (aerosnapInfo.snappedRight) scaledTargetRect.right = targetRect.right;
+        if (aerosnapInfo.snappedTop) scaledTargetRect.top = targetRect.top;
+        if (aerosnapInfo.snappedBottom) scaledTargetRect.bottom = targetRect.bottom;
+
+        MoveWindow(windowHwnd, scaledTargetRect.left, scaledTargetRect.top, scaledTargetRect.right - scaledTargetRect.left, scaledTargetRect.bottom - scaledTargetRect.top, TRUE);
+
+        RECT trueWindowRect;
+        HRESULT hr = DwmGetWindowAttribute(windowHwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &trueWindowRect, sizeof(RECT));
+
+        RECT windowRect;
+        GetWindowRect(windowHwnd, &windowRect);
+
+        auto leftOffset = windowRect.left - trueWindowRect.left;
+        auto topOffset = windowRect.top - trueWindowRect.top;
+        auto bottomOffset = windowRect.bottom - trueWindowRect.bottom;
+        auto rightOffset = windowRect.right - trueWindowRect.right;
+
+        MoveWindow(windowHwnd, scaledTargetRect.left + leftOffset, scaledTargetRect.top + topOffset, (scaledTargetRect.right + rightOffset) - (scaledTargetRect.left + leftOffset), (scaledTargetRect.bottom + bottomOffset) - (scaledTargetRect.top + topOffset), TRUE);
+    }
+    else
+    {
+        MONITORINFO targetMonitorInfo = { sizeof(MONITORINFO) };
+        GetMonitorInfoA(HMONITOR(screen->getNativeHandle()), &targetMonitorInfo);
+        RECT targetMonitorRect = targetMonitorInfo.rcWork;
+
+        RECT rawWindowRect;
+        GetWindowRect(windowHwnd, &rawWindowRect);
+        HMONITOR windowMonitor = MonitorFromWindow(windowHwnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO windowMonitorInfo = { sizeof(MONITORINFO) };
+        GetMonitorInfoA(windowMonitor, &windowMonitorInfo);
+        RECT monitorWorkRect = windowMonitorInfo.rcWork;
+
+        auto sourceScaling = getMonitorScaling(windowMonitor);
+        auto targetScaling = getMonitorScaling(HMONITOR(screen->getNativeHandle()));
+
+        RECT windowRect;
+        windowRect.left = (rawWindowRect.left - windowMonitorInfo.rcMonitor.left) / sourceScaling * targetScaling + windowMonitorInfo.rcMonitor.left;
+        windowRect.top = (rawWindowRect.top - windowMonitorInfo.rcMonitor.top) / sourceScaling * targetScaling + windowMonitorInfo.rcMonitor.top;
+        windowRect.right = (rawWindowRect.right - windowMonitorInfo.rcMonitor.left) / sourceScaling * targetScaling + windowMonitorInfo.rcMonitor.left;
+        windowRect.bottom = (rawWindowRect.bottom - windowMonitorInfo.rcMonitor.top) / sourceScaling * targetScaling + windowMonitorInfo.rcMonitor.top;
+
+        RECT finalRect;
+
+        if (windowRect.right - monitorWorkRect.left > targetMonitorRect.right - targetMonitorRect.left)
+        {
+            
+            finalRect.left = std::max(targetMonitorRect.left, targetMonitorRect.right - (windowRect.right - windowRect.left));
+            finalRect.right = std::min(finalRect.left + (windowRect.right - windowRect.left), targetMonitorRect.right);
+        }
+        else
+        {
+            finalRect.left = targetMonitorRect.left + (windowRect.left - monitorWorkRect.left);
+            finalRect.right = finalRect.left + (windowRect.right - windowRect.left);
+        }
+        
+        if (windowRect.bottom - monitorWorkRect.top > targetMonitorRect.bottom - targetMonitorRect.top)
+        {
+
+            finalRect.top = std::max(targetMonitorRect.top, targetMonitorRect.bottom - (windowRect.bottom - windowRect.top));
+            finalRect.bottom = std::min(finalRect.top + (windowRect.bottom - windowRect.top), targetMonitorRect.bottom);
+        }
+        else
+        {
+            finalRect.top = targetMonitorRect.top + (windowRect.top - monitorWorkRect.top);
+            finalRect.bottom = finalRect.top + (windowRect.bottom - windowRect.top);
+        }
+
+        MoveWindow(windowHwnd, finalRect.left, finalRect.top, finalRect.right - finalRect.left, finalRect.bottom - finalRect.top, TRUE);
+        MoveWindow(windowHwnd, finalRect.left, finalRect.top, finalRect.right - finalRect.left, finalRect.bottom - finalRect.top, TRUE);
+    }
+}
+
+}
+
+void MainWindow::onContextMenu(Command command)
 {
     if (_contextMenu && _contextMenu->isVisible()) 
     {
@@ -581,62 +820,48 @@ void MainWindow::onContextMenu()
 
     auto menuPoint = QCursor::pos();
 
-    POINT pt;
-    pt.x = menuPoint.x();
-    pt.y = menuPoint.y();
+    POINT windowsMenuPoint;
+    GetCursorPos(&windowsMenuPoint);
     
-    HWND windowHwnd = GetAncestor(WindowFromPoint(pt), GA_ROOT);
+    HWND windowHwnd = GetAncestor(WindowFromPoint(windowsMenuPoint), GA_ROOT);
     auto currentDesktop = VirtualDesktop::instance()->currentDesktop();
 
     if (windowHwnd)
     {
-        auto screens = MonitorManager::instance()->screens();
-        for (auto& screen : screens)
+        if (command == Command::ContextMenu || command == Command::MoveWindowToMonitorContextMenu)
         {
-            _contextMenu->addAction(QString("Move to %1").arg(screen->name()), this, [screen, windowHwnd] { 
-                setForegroundForce(windowHwnd);
-                ShowWindow(windowHwnd, SW_RESTORE);
-                MoveWindow(windowHwnd,
-                    screen->physicalCoordinateRect().x(),
-                    screen->physicalCoordinateRect().y(),
-                    screen->physicalCoordinateRect().width(),
-                    screen->physicalCoordinateRect().height(),
-                    TRUE);
-                ShowWindow(windowHwnd, SW_MAXIMIZE);
+            auto screens = MonitorManager::instance()->screens();
+            for (auto& screen : screens)
+            {
+                _contextMenu->addAction(QString("Move to %1").arg(screen->name()), this, [screen, windowHwnd] 
+                    { 
+                        setForegroundForce(windowHwnd);
+                        moveWindowToScreen(windowHwnd, screen);
+                    });
+            }
 
-                //ShowWindow(hwnd, SW_MAXIMIZE);
-                //SetWindowPos(hwnd, HWND_TOP, screen->physicalCoordinateRect().x(), screen->physicalCoordinateRect().y(),
-                //screen->physicalCoordinateRect().width(), screen->physicalCoordinateRect().height(),  SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-                //SetWindowPos(hwnd, HWND_TOP,
-                //screen->physicalCoordinateRect().x(), screen->physicalCoordinateRect().y(),
-                //screen->physicalCoordinateRect().width(),
-                //screen->physicalCoordinateRect().height(),
-                //SWP_SHOWWINDOW);
-                //QTimer::singleShot(500, [hwnd] {ShowWindow(hwnd, SW_MAXIMIZE);});
-                //ShowWindow(hwnd, SW_RESTORE); 
-
-                });
+            _contextMenu->addSeparator();
         }
-
-        _contextMenu->addSeparator();
-
-        auto desktops = VirtualDesktop::instance()->getDesktops();
-        for (auto& desktop : desktops)
+        
+        if (command == Command::ContextMenu || command == Command::MoveWindowToDesktopContextMenu)
         {
-            _contextMenu->addAction(VirtualDesktop::instance()->getDesktopName(desktop), this, 
-                [this, desktop, windowHwnd, currentDesktop] 
-                {
-                    setForegroundForce((HWND)_contextMenu->winId());
-                    VirtualDesktop::instance()->moveWindowToDesktop(static_cast<void*>(windowHwnd), desktop);
-
-                    Qt::KeyboardModifiers modifiers = QGuiApplication::keyboardModifiers();
-                    if (modifiers & Qt::ShiftModifier)
+            auto desktops = VirtualDesktop::instance()->getDesktops();
+            for (auto& desktop : desktops)
+            {
+                _contextMenu->addAction(VirtualDesktop::instance()->getDesktopName(desktop), this, 
+                    [this, desktop, windowHwnd, currentDesktop] 
                     {
-                        VirtualDesktop::instance()->moveToDesktop(desktop);
-                    }
-                });
-        }
+                        setForegroundForce((HWND)_contextMenu->winId());
+                        VirtualDesktop::instance()->moveWindowToDesktop(static_cast<void*>(windowHwnd), desktop);
 
+                        Qt::KeyboardModifiers modifiers = QGuiApplication::keyboardModifiers();
+                        if (modifiers & Qt::ShiftModifier)
+                        {
+                            VirtualDesktop::instance()->moveToDesktop(desktop);
+                        }
+                    });
+            }
+        }
     }
 
     setForegroundForce((HWND)_contextMenu->winId());
@@ -648,6 +873,28 @@ void MainWindow::onHotkeyTriggered(const Hotkey& hotkey)
 {
     switch(hotkey.command)
     {
+    case Command::SwitchToDesktop:
+    {
+        if (!hotkey.arguments.isEmpty())
+        {
+            if (auto targetDesktop = VirtualDesktop::instance()->getDesktopByName(hotkey.arguments[0]))
+            {
+                VirtualDesktop::instance()->moveToDesktop(targetDesktop, false);
+            }
+        }
+    }
+    break;
+    case Command::SwitchToDesktopWithWindow:
+    {
+        if (!hotkey.arguments.isEmpty())
+        {
+            if (auto targetDesktop = VirtualDesktop::instance()->getDesktopByName(hotkey.arguments[0]))
+            {
+                VirtualDesktop::instance()->moveToDesktop(targetDesktop, true);
+            }
+        }
+    }
+    break;
     case Command::SwitchToLeftDesktop:
         onSwitchVirtualDesktop(Direction::Left, false);
         break;
@@ -666,8 +913,49 @@ void MainWindow::onHotkeyTriggered(const Hotkey& hotkey)
     case Command::SwitchToRightDesktopWithWindow:
         onSwitchVirtualDesktop(Direction::Right, true);
         break;
+    case Command::MoveWindowToMonitor:
+        {
+        if (!hotkey.arguments.isEmpty())
+        {
+            auto screens = MonitorManager::instance()->screens();
+            for (auto& screen : screens)
+            {
+                if (screen->hardwareEDIDHeaders().contains(hotkey.arguments[0]))
+                {
+                    auto foregroundWindow = GetForegroundWindow();
+                    if (foregroundWindow)
+                    {
+                        moveWindowToScreen(foregroundWindow, screen);
+                    }
+                    break;
+                }
+            }
+        }
+        }
+        break;
+    case Command::MoveWindowToDesktop:
+        {
+        if (!hotkey.arguments.isEmpty())
+        {
+            if (auto targetDesktop = VirtualDesktop::instance()->getDesktopByName(hotkey.arguments[0]))
+            {
+                auto foregroundWindow = GetForegroundWindow();
+                if (foregroundWindow)
+                {
+                    VirtualDesktop::instance()->moveWindowToDesktop(foregroundWindow, targetDesktop);
+                }
+            }            
+        }
+        }
+        break;
     case Command::ContextMenu:
-        onContextMenu();
+        onContextMenu(Command::ContextMenu);
+        break;
+    case Command::MoveWindowToDesktopContextMenu:
+        onContextMenu(Command::MoveWindowToDesktopContextMenu);
+        break;
+    case Command::MoveWindowToMonitorContextMenu:
+        onContextMenu(Command::MoveWindowToMonitorContextMenu);
         break;
     default:
         break;

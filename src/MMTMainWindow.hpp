@@ -17,6 +17,7 @@ namespace MMT{
 class MonitorConfigWidget;
 class ScreenOverlay;
 struct Hotkey;
+enum class Command;
 
 class MainWindow : public QMainWindow
 {
@@ -49,9 +50,9 @@ private slots:
     void onAbout();
     void onEditHotkeys();
     void restartCursorAdjust();
-    void onContextMenu();
+    void onContextMenu(Command command);
     void onHotkeyTriggered(const Hotkey&);
-
+    
 protected:
     void closeEvent(QCloseEvent* evt) override;
 

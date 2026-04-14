@@ -181,16 +181,10 @@ QString CommandHelper::getDescription(Command command)
         return "Show desktop name";
         break;
     case Command::MoveWindowToMonitor:
-        return "Move window under the cursor to the target monitor";
-        break;
-    case Command::MoveWindowToMonitorFullscreen:
-        return "Move window under the cursor to the target monitor and make it fullscreen";
+        return "Move window in focus to the target monitor";
         break;
     case Command::MoveWindowToDesktop:
-        return "Move window under the cursor to the target desktop";
-        break;
-    case Command::MoveWindowToDesktopAndSwitch:
-        return "Move window under the cursor to the target desktop and switch to that desktop";
+        return "Move window in focus to the target desktop";
         break;
     case Command::MoveWindowToMonitorContextMenu:
         return "Summon window management context menu(move between monitors)";
@@ -209,7 +203,7 @@ QString CommandHelper::getDescription(Command command)
 
 int CommandHelper::enumCount()
 {
-    return 15;
+    return 13;
 }
 
 

@@ -19,9 +19,7 @@ enum class Command
     SwitchToRightDesktopWithWindow,
     ShowDesktopName,
     MoveWindowToMonitor,
-    MoveWindowToMonitorFullscreen,
     MoveWindowToDesktop,
-    MoveWindowToDesktopAndSwitch,
     MoveWindowToMonitorContextMenu,
     MoveWindowToDesktopContextMenu,
     ContextMenu

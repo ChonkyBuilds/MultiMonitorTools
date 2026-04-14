@@ -209,14 +209,12 @@ public:
                 case Command::SwitchToDesktop:
                 case Command::SwitchToDesktopWithWindow:
                 case Command::MoveWindowToDesktop:
-                case Command::MoveWindowToDesktopAndSwitch:
                 {
                     _desktopSelector->setVisible(true);
                     _monitorSelector->setVisible(false);
                     break;
                 }
                 case Command::MoveWindowToMonitor:
-                case Command::MoveWindowToMonitorFullscreen:
                 {
                     _desktopSelector->setVisible(false);
                     _monitorSelector->setVisible(true);
@@ -280,13 +278,11 @@ public:
         case Command::SwitchToDesktop:
         case Command::SwitchToDesktopWithWindow:
         case Command::MoveWindowToDesktop:
-        case Command::MoveWindowToDesktopAndSwitch:
         {
             currentHotkey.arguments << _desktopSelector->currentText();
             break;
         }
         case Command::MoveWindowToMonitor:
-        case Command::MoveWindowToMonitorFullscreen:
         {
             currentHotkey.arguments << _monitorSelector->currentData().toString();
 
@@ -334,7 +330,6 @@ public:
         case Command::SwitchToDesktop:
         case Command::SwitchToDesktopWithWindow:
         case Command::MoveWindowToDesktop:
-        case Command::MoveWindowToDesktopAndSwitch:
         {
             if (!hotkey.arguments.isEmpty())
             {
@@ -349,7 +344,6 @@ public:
             break;
         }
         case Command::MoveWindowToMonitor:
-        case Command::MoveWindowToMonitorFullscreen:
         {
             if (!hotkey.arguments.isEmpty())
             {
