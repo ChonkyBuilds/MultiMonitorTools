@@ -3,6 +3,5 @@
         <file>resources/AppIcon.ico</file>
         <file>resources/Disabled.ico</file>
 		<file>resources/delete.svg</file>
-		<file>resources/edit.svg</file>
     </qresource>
 </RCC>

@@ -502,7 +502,6 @@ void MainWindow::onAbout()
     layout->addWidget(label);
 
     QStringList attributes;
-    attributes << "https://www.svgrepo.com/svg/522525/edit-2";
     attributes << "https://www.svgrepo.com/svg/506459/delete-left";
 
     auto attributesLabel = new QLabel();
