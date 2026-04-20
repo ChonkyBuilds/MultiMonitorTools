@@ -510,7 +510,7 @@ void MainWindow::onAbout()
     label->setTextFormat(Qt::RichText);
     label->setTextInteractionFlags(Qt::TextBrowserInteraction);
     label->setOpenExternalLinks(true);
-    label->setText(QString("<b>MultiMonitorTools V%1.</b><br>Licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.en.html'>GPLv3 license</a>.<br>Visit this <a href='https://github.com/ChonkyBuilds/MultiMonitorTools'>github page</a> to check for updates or report bugs.").arg(VERSION));
+    label->setText(QString("<b>MultiMonitorTools %1.</b><br>Licensed under the <a href='https://www.gnu.org/licenses/gpl-3.0.en.html'>GPLv3 license</a>.<br>Visit this <a href='https://github.com/ChonkyBuilds/MultiMonitorTools'>github page</a> to check for updates or report bugs.").arg(APP_VERSION));
     label->setWordWrap(false);
     layout->addWidget(label);
 

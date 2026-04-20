@@ -56,6 +56,15 @@ set_property(GLOBAL PROPERTY AUTORCC_SOURCE_GROUP "Generated Files")
 set_property(GLOBAL PROPERTY AUTOUIC_SOURCE_GROUP "Generated Files")
 set_property(GLOBAL PROPERTY AUTOGEN_TARGETS_FOLDER "Generated Files")
 
+# use tag as version
+execute_process(
+    COMMAND git describe --tags --always
+    OUTPUT_VARIABLE GIT_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+add_definitions(-DAPP_VERSION="${GIT_TAG}")
+
 # --- Sources ---
 set(SOURCES
     src/main.cpp
