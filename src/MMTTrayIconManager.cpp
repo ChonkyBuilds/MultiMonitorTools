@@ -127,7 +127,6 @@ TrayIconManager::TrayIconManager(QWidget* parent) : QWidget(parent)
 
     auto desktopSelector = new DynamicComboBox;
     desktopSelector->updateItems();
-    desktopSelector->setEnabled(enableCustomTrayIcon->isChecked());
     desktopSelector->setSizeAdjustPolicy(QComboBox::AdjustToContents);
 
     auto desktopIcon = new QToolButton();
