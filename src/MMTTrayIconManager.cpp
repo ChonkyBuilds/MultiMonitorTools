@@ -184,6 +184,11 @@ TrayIconManager::TrayIconManager(QWidget* parent) : QWidget(parent)
     {
         checkDesktopTimer->start();
     }
+    else
+    {
+        desktopSelector->setVisible(false);
+        desktopIcon->setVisible(false);
+    }
 
     QTimer::singleShot(0, [this](){ onEventLoopStarted();});
 }
