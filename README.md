@@ -15,6 +15,10 @@ A utility app for Windows 11 that enhances the multi-monitor experience.
 
 - When the mouse cursor crosses monitors, adjust its position to be physically accurate.
 
+- Send windows to other monitors or virtual desktops with customizable hotkeys.
+
+- Customize the tray icon for each virtual desktop to check the current virtual desktop at a glance.
+
 # Using the app
 If you haven't already, install the [Visual C++ Redistributable Packages](https://aka.ms/vs/17/release/VC_redist.x64.exe).
 
@@ -30,11 +34,12 @@ If you haven't already, install the [Visual C++ Redistributable Packages](https:
 
   * To fine tune the monitors' geometry, toggle `Draw grid lines` to draw a grid of lines on the monitors. Fine tune your monitor layout until the grid lines align across monitors. The cursor's position will follow these grid lines.
 
-- Other features
-
-    * Press `Win`+`Alt` to display a temporary prompt that shows the current desktop name.
-
-    * Hold `Shift` when switching virtual desktops to bring the current window with you.
+- Customize hotkeys with the hotkey editor to:
+  * Switch to another virtual desktop
+  * Send a window to another virtual desktop
+  * Send a window to another monitor
+  * display a temporary prompt that shows the current desktop name
+  * Check out the default hotkeys
 
 # Building
 
