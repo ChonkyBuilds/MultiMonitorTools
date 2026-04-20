@@ -2,6 +2,9 @@
 
 #include <QSettings>
 #include <QMetaEnum>
+#include <QIcon>
+#include <QPainter>
+#include <QDir>
 
 namespace MMT
 {
@@ -25,9 +28,15 @@ public:
     void setEasingCurveString(const QString&);
     int animationDuration();
     void setAnimationDuration(int);
+    bool customTrayIconEnabled();
+    void setCustomTrayIconEnabled(bool);
+    QIcon customTrayIconForDesktop(const QString& desktopName);
+    void setCustomTrayIconPathForDesktop(const QString& desktopName, const QString& iconPath);
+    void setCustomTrayIconTextForDesktop(const QString& desktopName, const QString& iconText);
 
 private:
     std::unique_ptr<QSettings> _settings;
+    QMap<QString, QIcon> _iconCache;
 };
 
 SettingsImpl::SettingsImpl()
@@ -104,6 +113,102 @@ int SettingsImpl::animationDuration()
 void SettingsImpl::setAnimationDuration(int duration)
 {
     _settings->setValue("AnimationDuration", duration);
+}
+
+bool SettingsImpl::customTrayIconEnabled()
+{
+    return _settings->value("CustomTrayIconEnabled", false).toBool();
+}
+
+void SettingsImpl::setCustomTrayIconEnabled(bool enabled)
+{
+    _settings->setValue("CustomTrayIconEnabled", enabled);
+}
+
+QIcon SettingsImpl::customTrayIconForDesktop(const QString& desktopName)
+{
+    if (desktopName.isEmpty()) return QIcon();
+
+    if (_iconCache.contains(desktopName))
+    {
+        return _iconCache[desktopName];;
+    }
+
+    QIcon icon;
+
+    _settings->beginGroup("DesktopTrayIcons");
+    _settings->beginGroup(desktopName);
+    auto iconPath = _settings->value("IconPath").toString();
+    if (!iconPath.isEmpty())
+    {
+        icon = QIcon(iconPath);
+    }
+    else
+    {
+        QIcon baseIcon(":/resources/AppIcon.ico");
+        QPixmap pixmap = baseIcon.pixmap(QSize(256, 256));
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+        QFont font = painter.font();
+        font.setPixelSize(175);
+        font.setBold(true);
+        painter.setFont(font);
+        painter.setPen(Qt::white);
+        QRect rect = pixmap.rect().adjusted(0,0,0,-60);
+        painter.drawText(rect, Qt::AlignCenter, _settings->value("IconText", desktopName[0]).toString());
+        painter.end();
+
+        icon = QIcon(pixmap);
+    }
+
+    _settings->endGroup();
+    _settings->endGroup();
+    
+    _iconCache[desktopName] = icon;
+    return icon;
+}
+
+void SettingsImpl::setCustomTrayIconPathForDesktop(const QString& desktopName, const QString& iconPath)
+{
+    _iconCache.remove(desktopName);
+
+    QString path = "customIcons";
+    QDir dir;
+    if (!dir.exists(path)) 
+    {
+        dir.mkpath(path);
+    }
+
+    QString internalPath = path + "/" + desktopName + "." + QFileInfo(iconPath).suffix();
+    if (QFile::exists(internalPath)) 
+    {
+        QFile::remove(internalPath);
+    }
+    if (!QFile::copy(iconPath, internalPath))
+    {
+        qWarning() << "Failed to copy icon from " << iconPath << " to " << internalPath;
+        return;
+    }
+
+    _settings->beginGroup("DesktopTrayIcons");
+    _settings->beginGroup(desktopName);
+    _settings->setValue("IconPath", internalPath);
+    _settings->setValue("IconText", "");
+    _settings->endGroup();
+    _settings->endGroup();
+}
+
+void SettingsImpl::setCustomTrayIconTextForDesktop(const QString& desktopName, const QString& iconText)
+{
+    _iconCache.remove(desktopName);
+
+    _settings->beginGroup("DesktopTrayIcons");
+    _settings->beginGroup(desktopName);
+    _settings->setValue("IconText", iconText);
+    _settings->setValue("IconPath", "");
+    _settings->endGroup();
+    _settings->endGroup();
 }
 
 Settings* Settings::instance()

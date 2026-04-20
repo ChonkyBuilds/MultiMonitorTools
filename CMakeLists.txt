@@ -71,6 +71,7 @@ set(SOURCES
     src/MMTSettings.cpp
 	src/MMTHotkeys.cpp
 	src/MMTHotkeyEditor.cpp
+	src/MMTTrayIconManager.cpp
 )
 
 # --- Headers ---
@@ -87,6 +88,7 @@ set(HEADERS
     src/MMTMonitorConfigWidget.hpp
     src/MMTHotkeys.hpp
 	src/MMTHotkeyEditor.hpp
+	src/MMTTrayIconManager.hpp
 )
 
 # --- VirtualDesktopAPI ---
@@ -142,7 +144,6 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 			--no-system-dxc-compiler
 			--no-system-d3d-compiler
 			--no-network
-			--exclude-plugins qjpeg,qgif
             "$<TARGET_FILE:${PROJECT_NAME}>"
     COMMENT "Deploying Qt runtime..."
 )

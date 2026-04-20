@@ -10,6 +10,7 @@
 #include "MMTScreenOverlay.hpp"
 #include "MMTHotkeys.hpp"
 #include "MMTHotkeyEditor.hpp"
+#include "MMTTrayIconManager.hpp"
 
 #include <QHboxLayout>
 #include <QPushButton>
@@ -138,6 +139,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     animationDuration->setValue(Settings::instance()->animationDuration());
     QObject::connect(animationDuration, &QSpinBox::valueChanged, this, &MainWindow::onAnimationDurationChanged);
 
+    auto trayIconManager = new TrayIconManager(this);
+    QObject::connect(trayIconManager, &TrayIconManager::updateTrayIcon, this, [this](const QIcon& icon)
+        {
+            _systemTray->setIcon(icon);
+        });
+
     _logLevel = new QComboBox;
     _logLevel->addItem("Debug");
     _logLevel->addItem("Info");
@@ -197,6 +204,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     animationDurationLayout->addWidget(animationDuration);
     animationDurationLayout->addStretch();
     virtualDesktopSettingsLayout->addLayout(animationDurationLayout);
+    virtualDesktopSettingsLayout->addWidget(trayIconManager);
 
     auto mainWidget = new QWidget;
     auto mainWidgetLayout = new QVBoxLayout(mainWidget);

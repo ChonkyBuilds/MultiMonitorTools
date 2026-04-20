@@ -3,6 +3,7 @@
 #include <QEasingCurve>
 
 class QString;
+class QIcon;
 
 namespace MMT
 {
@@ -31,6 +32,14 @@ public:
 
     virtual int animationDuration() = 0;
     virtual void setAnimationDuration(int) = 0;
+
+    virtual bool customTrayIconEnabled() = 0;
+    virtual void setCustomTrayIconEnabled(bool) = 0;
+
+    virtual QIcon customTrayIconForDesktop(const QString& desktopName) = 0;
+    virtual void setCustomTrayIconPathForDesktop(const QString& desktopName, const QString& iconPath) = 0;
+    virtual void setCustomTrayIconTextForDesktop(const QString& desktopName, const QString& iconText) = 0;
+
 };
 
 }
