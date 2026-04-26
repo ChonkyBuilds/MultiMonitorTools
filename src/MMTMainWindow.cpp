@@ -498,6 +498,7 @@ void MainWindow::onMonitorInfoRefreshed()
 {
     setupOverlays();
     _monitorConfigWidget->setupScreens();
+    _cursorAdjustRestartTimer->start(1000);
 }
 
 void MainWindow::onAbout()
