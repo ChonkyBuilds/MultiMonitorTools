@@ -825,6 +825,77 @@ void moveWindowToScreen(HWND windowHwnd, Screen* screen)
     }
 }
 
+enum class WindowMoveDirection
+{
+    Left = 0,
+    Right,
+    Top,
+    Bottom
+};
+
+void moveWindowToAdjacentMonitor(WindowMoveDirection direction)
+{
+    auto foregroundWindow = GetForegroundWindow();
+    if (foregroundWindow)
+    {
+        auto screens = MonitorManager::instance()->screens();
+
+        Screen* currentScreen = nullptr;
+        HMONITOR hMonitor = MonitorFromWindow(foregroundWindow, MONITOR_DEFAULTTONEAREST);
+        for (auto& screen : screens)
+        {
+            if (hMonitor == screen->getNativeHandle())
+            {
+                currentScreen = screen;
+            }
+        }
+        if (currentScreen)
+        {
+            Screen* targetScreen = nullptr;
+
+            auto currentScreenRect = currentScreen->logicalCoordinateRect();
+            for (auto& screen : screens)
+            {
+                if (screen == currentScreen) continue;
+                auto screenRect = screen->logicalCoordinateRect();
+                switch (direction)
+                {
+                case WindowMoveDirection::Left:
+                    if (screenRect.right() + 1 == currentScreenRect.left() && ((screenRect.top() >= currentScreenRect.top() && screenRect.top() <= currentScreenRect.bottom()) || (screenRect.bottom() >= currentScreenRect.top() && screenRect.top() <= currentScreenRect.bottom())))
+                    {
+                        targetScreen = screen;
+                    }
+                    break;
+                case WindowMoveDirection::Right:
+                    if (screenRect.left() - 1 == currentScreenRect.right() && ((screenRect.top() >= currentScreenRect.top() && screenRect.top() <= currentScreenRect.bottom()) || (screenRect.bottom() >= currentScreenRect.top() && screenRect.top() <= currentScreenRect.bottom())))
+                    {
+                        targetScreen = screen;
+                    }
+                    break;
+                case WindowMoveDirection::Bottom:
+                    if (screenRect.top() - 1 == currentScreenRect.bottom() && ((screenRect.left() >= currentScreenRect.left() && screenRect.left() <= currentScreenRect.right()) || (screenRect.right() >= currentScreenRect.left() && screenRect.right() <= currentScreenRect.right())))
+                    {
+                        targetScreen = screen;
+                    }
+                    break;
+                case WindowMoveDirection::Top:
+                    if (screenRect.bottom() + 1 == currentScreenRect.top() && ((screenRect.left() >= currentScreenRect.left() && screenRect.left() <= currentScreenRect.right()) || (screenRect.right() >= currentScreenRect.left() && screenRect.right() <= currentScreenRect.right())))
+                    {
+                        targetScreen = screen;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            if (targetScreen)
+            {
+                moveWindowToScreen(foregroundWindow, targetScreen);
+            }
+        }
+    }
+}
 }
 
 void MainWindow::onContextMenu(Command command)
@@ -951,6 +1022,18 @@ void MainWindow::onHotkeyTriggered(const Hotkey& hotkey)
             }
         }
         }
+        break;
+    case Command::MoveWindowToLeftMonitor:
+        moveWindowToAdjacentMonitor(WindowMoveDirection::Left);
+        break;
+    case Command::MoveWindowToRightMonitor:
+        moveWindowToAdjacentMonitor(WindowMoveDirection::Right);
+        break;
+    case Command::MoveWindowToTopMonitor:
+        moveWindowToAdjacentMonitor(WindowMoveDirection::Top);
+        break;
+    case Command::MoveWindowToBottomMonitor:
+        moveWindowToAdjacentMonitor(WindowMoveDirection::Bottom);
         break;
     case Command::MoveWindowToDesktop:
         {

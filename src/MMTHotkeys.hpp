@@ -22,7 +22,11 @@ enum class Command
     MoveWindowToDesktop,
     MoveWindowToMonitorContextMenu,
     MoveWindowToDesktopContextMenu,
-    ContextMenu
+    ContextMenu,
+    MoveWindowToLeftMonitor,
+    MoveWindowToRightMonitor,
+    MoveWindowToBottomMonitor,
+    MoveWindowToTopMonitor
 };
 
 class CommandHelper

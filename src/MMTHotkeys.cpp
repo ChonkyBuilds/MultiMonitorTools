@@ -195,6 +195,18 @@ QString CommandHelper::getDescription(Command command)
     case Command::ContextMenu:
         return "Summon window management context menu(move between monitors and desktops)";
         break;
+    case Command::MoveWindowToLeftMonitor:
+        return "Move window in focus to the monitor on the left";
+        break;
+    case Command::MoveWindowToRightMonitor:
+        return "Move window in focus to the monitor on the right";
+        break;
+    case Command::MoveWindowToTopMonitor:
+        return "Move window in focus to the monitor above the current monitor";
+        break;
+    case Command::MoveWindowToBottomMonitor:
+        return "Move window in focus to the monitor below the current monitor";
+        break;
     defualt:
         return QString();
     }
@@ -203,7 +215,7 @@ QString CommandHelper::getDescription(Command command)
 
 int CommandHelper::enumCount()
 {
-    return 13;
+    return 17;
 }
 
 
